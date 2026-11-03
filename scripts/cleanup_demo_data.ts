@@ -17,17 +17,17 @@ async function main() {
     select: { id: true, title: true },
   });
 
-  const quizIds = demoQuizzes.map((q) => q.id);
+  const quizIds = demoQuizzes.map((q: any) => q.id);
 
   if (quizIds.length > 0) {
-    console.log(`Found ${quizIds.length} demo quizzes to remove:`, demoQuizzes.map((q) => q.title));
+    console.log(`Found ${quizIds.length} demo quizzes to remove:`, demoQuizzes.map((q: any) => q.title));
 
     // Delete attempts and related
     const attempts = await prisma.quizAttempt.findMany({
       where: { quizId: { in: quizIds } },
       select: { id: true },
     });
-    const attemptIds = attempts.map((a) => a.id);
+    const attemptIds = attempts.map((a: any) => a.id);
 
     if (attemptIds.length > 0) {
       await prisma.attemptAnswerOption.deleteMany({
@@ -95,16 +95,16 @@ async function main() {
     select: { id: true, email: true },
   });
 
-  const userIds = nonAdminUsers.map((u) => u.id);
+  const userIds = nonAdminUsers.map((u: any) => u.id);
   if (userIds.length > 0) {
-    console.log(`Found ${userIds.length} non-admin users to clean up:`, nonAdminUsers.map((u) => u.email));
+    console.log(`Found ${userIds.length} non-admin users to clean up:`, nonAdminUsers.map((u: any) => u.email));
 
     // Clear user attempts/results/registrations/certificates/points/auditLogs
     const userAttempts = await prisma.quizAttempt.findMany({
       where: { userId: { in: userIds } },
       select: { id: true },
     });
-    const userAttemptIds = userAttempts.map((a) => a.id);
+    const userAttemptIds = userAttempts.map((a: any) => a.id);
 
     if (userAttemptIds.length > 0) {
       await prisma.attemptAnswerOption.deleteMany({

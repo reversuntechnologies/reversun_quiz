@@ -35,13 +35,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const formatted = pastQuizzes.map((q) => ({
+    const formatted = pastQuizzes.map((q: any) => ({
       ...q,
-      totalQuestions: q._count.questions,
-      completedAttempts: q._count.attempts,
+      totalQuestions: q._count?.questions ?? 0,
+      completedAttempts: q._count?.attempts ?? 0,
     }));
 
-    return apiSuccess(formatted, "Past quizzes retrieved successfully");
+    return apiSuccess({ quizzes: formatted }, "Past quizzes retrieved successfully");
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error listing past quizzes";
     return apiError(message, "PAST_QUIZZES_FAILED", 500);

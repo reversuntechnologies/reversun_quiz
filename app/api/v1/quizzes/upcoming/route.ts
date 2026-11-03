@@ -36,13 +36,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const formatted = upcomingQuizzes.map((q) => ({
+    const formatted = upcomingQuizzes.map((q: any) => ({
       ...q,
-      totalQuestions: q._count.questions,
-      participantCount: q._count.registrations,
+      totalQuestions: q._count?.questions ?? 0,
+      participantCount: q._count?.registrations ?? 0,
     }));
 
-    return apiSuccess(formatted, "Upcoming quizzes retrieved successfully");
+    return apiSuccess({ quizzes: formatted }, "Upcoming quizzes retrieved successfully");
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error listing upcoming quizzes";
     return apiError(message, "UPCOMING_QUIZZES_FAILED", 500);

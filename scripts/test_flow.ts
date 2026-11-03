@@ -127,13 +127,13 @@ async function main() {
 
   // Candidate answers Question 1 (Correct), Question 2 (Correct), Question 3 (Incorrect)
   const q1 = quiz.questions[0];
-  const q1Correct = q1.options.find((o) => o.isCorrect)!;
+  const q1Correct = q1.options.find((o: any) => o.isCorrect)!;
 
   const q2 = quiz.questions[1];
-  const q2Correct = q2.options.find((o) => o.isCorrect)!;
+  const q2Correct = q2.options.find((o: any) => o.isCorrect)!;
 
   const q3 = quiz.questions[2];
-  const q3Wrong = q3.options.find((o) => !o.isCorrect)!;
+  const q3Wrong = q3.options.find((o: any) => !o.isCorrect)!;
 
   // Grade & submit
   const now = new Date();
