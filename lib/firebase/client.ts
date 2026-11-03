@@ -26,5 +26,14 @@ if (typeof window !== "undefined" && firebaseConfig.apiKey) {
   storage = getStorage(app);
 }
 
+export function getFirebaseAuth(): Auth | undefined {
+  if (typeof window === "undefined") return undefined;
+  if (!auth && firebaseConfig.apiKey) {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+  }
+  return auth;
+}
+
 export { app, auth, database, storage };
 export default app;

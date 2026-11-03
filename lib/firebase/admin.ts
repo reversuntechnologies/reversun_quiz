@@ -28,34 +28,56 @@ function initializeFirebaseAdmin(): App | null {
   }
 
   if (projectId && clientEmail && privateKey) {
-    return initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-      databaseURL,
-      storageBucket,
-    });
+    try {
+      return initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+        databaseURL,
+        storageBucket,
+      });
+    } catch (e) {
+      console.error("Firebase Admin cert initialization error:", e);
+    }
   }
 
   if (projectId) {
-    return initializeApp({
-      projectId,
-      databaseURL,
-      storageBucket,
-    });
+    try {
+      return initializeApp({
+        projectId,
+        databaseURL,
+        storageBucket,
+      });
+    } catch (e) {
+      console.error("Firebase Admin project initialization error:", e);
+    }
   }
 
   return null;
 }
 
-export const adminApp: App | null = initializeFirebaseAdmin();
-export const adminAuth: Auth | null = adminApp ? getAuth(adminApp) : null;
+export function getAdminApp(): App | null {
+  const currentApps = getApps();
+  if (currentApps.length > 0) {
+    return currentApps[0]!;
+  }
+  return initializeFirebaseAdmin();
+}
+
+export function getAdminAuth(): Auth | null {
+  const app = getAdminApp();
+  return app ? getAuth(app) : null;
+}
+
+export const adminApp: App | null = getAdminApp();
+export const adminAuth: Auth | null = getAdminAuth();
 
 export function getAdminDb(): Database | null {
   try {
-    return adminApp ? getDatabase(adminApp) : null;
+    const app = getAdminApp();
+    return app ? getDatabase(app) : null;
   } catch {
     return null;
   }
@@ -63,7 +85,8 @@ export function getAdminDb(): Database | null {
 
 export function getAdminStorage(): Storage | null {
   try {
-    return adminApp ? getStorage(adminApp) : null;
+    const app = getAdminApp();
+    return app ? getStorage(app) : null;
   } catch {
     return null;
   }
@@ -74,7 +97,9 @@ export function getAdminStorage(): Storage | null {
  * Reads solely from configured environment credentials.
  */
 export async function verifyFirebaseIdToken(token: string): Promise<DecodedTokenPayload> {
-  if (!adminAuth) {
+  const authInstance = getAdminAuth();
+
+  if (!authInstance) {
     if (process.env.NODE_ENV === "development" && token.startsWith("dev-token-")) {
       const mockUid = token.replace("dev-token-", "");
       return {
@@ -87,7 +112,7 @@ export async function verifyFirebaseIdToken(token: string): Promise<DecodedToken
   }
 
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await authInstance.verifyIdToken(token);
     return {
       ...decoded,
       uid: decoded.uid,

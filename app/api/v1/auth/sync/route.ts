@@ -11,9 +11,13 @@ export async function POST(request: NextRequest) {
 
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7).trim();
-      const decoded = await verifyFirebaseIdToken(token);
-      verifiedUid = decoded.uid;
-      verifiedEmail = decoded.email || null;
+      try {
+        const decoded = await verifyFirebaseIdToken(token);
+        verifiedUid = decoded.uid;
+        verifiedEmail = decoded.email || null;
+      } catch (err) {
+        console.warn("Could not verify Firebase token in /auth/sync:", err);
+      }
     }
 
     const body = await request.json().catch(() => ({}));
@@ -33,27 +37,55 @@ export async function POST(request: NextRequest) {
     // Default display name derived from email prefix
     const emailPrefix = email.split("@")[0] || "player";
     const name = body.name || emailPrefix;
-    const displayName = body.displayName || emailPrefix;
-    const avatarUrl = body.avatarUrl || null;
+    const displayName = body.displayName || body.name || emailPrefix;
+    const avatarUrl = body.avatarUrl !== undefined ? body.avatarUrl : null;
 
-    // Upsert into Neon PostgreSQL
-    const user = await prisma.user.upsert({
+    // 1. Look up existing user by firebaseUid
+    let user = await prisma.user.findUnique({
       where: { firebaseUid },
-      update: {
-        email,
-        name: body.name || undefined,
-        displayName: body.displayName || undefined,
-        avatarUrl: body.avatarUrl !== undefined ? avatarUrl : undefined,
-      },
-      create: {
-        firebaseUid,
-        email,
-        name,
-        displayName,
-        avatarUrl,
-        role: "USER",
-      },
     });
+
+    if (user) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email,
+          name: body.name || user.name,
+          displayName: body.displayName || user.displayName,
+          avatarUrl: avatarUrl !== null ? avatarUrl : user.avatarUrl,
+        },
+      });
+    } else {
+      // 2. Check if user exists by email in Neon PostgreSQL to prevent unique constraint conflict
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (existingByEmail) {
+        // Link this Firebase UID to the existing Neon PostgreSQL record
+        user = await prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            firebaseUid,
+            name: body.name || existingByEmail.name,
+            displayName: body.displayName || existingByEmail.displayName,
+            avatarUrl: avatarUrl !== null ? avatarUrl : existingByEmail.avatarUrl,
+          },
+        });
+      } else {
+        // 3. Create new user record in Neon DB
+        user = await prisma.user.create({
+          data: {
+            firebaseUid,
+            email,
+            name,
+            displayName,
+            avatarUrl,
+            role: "USER",
+          },
+        });
+      }
+    }
 
     return apiSuccess(
       {

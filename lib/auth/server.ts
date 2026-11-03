@@ -11,7 +11,7 @@ export interface AuthenticatedUserContext {
 
 /**
  * Extracts and verifies the Firebase ID token from the request Authorization header.
- * Then looks up the corresponding User record in PostgreSQL.
+ * Then looks up or auto-syncs the corresponding User record in Neon PostgreSQL.
  */
 export async function getAuthenticatedUser(
   request: NextRequest
@@ -36,12 +36,41 @@ export async function getAuthenticatedUser(
     throw new AuthError("Token payload missing required identity claims", 401, "INVALID_TOKEN_CLAIMS");
   }
 
-  const user = await prisma.user.findUnique({
+  // Look up user in Neon PostgreSQL by Firebase UID
+  let user = await prisma.user.findUnique({
     where: { firebaseUid: decoded.uid },
   });
 
+  // If not found by Firebase UID, check by email
+  if (!user && decoded.email) {
+    user = await prisma.user.findUnique({
+      where: { email: decoded.email },
+    });
+
+    if (user) {
+      // Re-link the existing record to this Firebase UID
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { firebaseUid: decoded.uid },
+      });
+    } else {
+      // Auto-provision user record in Neon PostgreSQL
+      const emailPrefix = decoded.email.split("@")[0] || "player";
+      user = await prisma.user.create({
+        data: {
+          firebaseUid: decoded.uid,
+          email: decoded.email,
+          name: decoded.name || emailPrefix,
+          displayName: decoded.name || emailPrefix,
+          avatarUrl: decoded.picture || null,
+          role: "USER",
+        },
+      });
+    }
+  }
+
   if (!user) {
-    throw new AuthError("User profile does not exist in database. Call /auth/sync first.", 404, "USER_NOT_FOUND");
+    throw new AuthError("User profile does not exist in database.", 404, "USER_NOT_FOUND");
   }
 
   if (!user.isActive) {
