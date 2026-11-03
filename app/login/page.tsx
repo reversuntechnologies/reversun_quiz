@@ -130,11 +130,6 @@ function LoginFormContent() {
             />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF4EF] text-[#FC6235] text-[11px] font-black uppercase tracking-wider mb-3 border border-[#FC6235]/30">
-            <Sparkle weight="fill" className="w-3.5 h-3.5" />
-            Participant Sign In
-          </div>
-
           <h1 className="text-2xl font-black text-[#101E35] tracking-tight">
             Welcome to Reversun
           </h1>
@@ -175,45 +170,6 @@ function LoginFormContent() {
               </>
             )}
           </button>
-
-          {/* Instant 1-Click Demo Testing Button */}
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={signingIn}
-            className="w-full py-2.5 px-4 bg-[#FFF4EF] hover:bg-[#FFE8DE] text-[#FC6235] font-bold text-xs rounded-xl border border-[#FC6235]/25 transition flex items-center justify-center gap-2"
-          >
-            <Sparkle weight="bold" className="w-3.5 h-3.5 text-[#FC6235]" />
-            <span>1-Click Test Login as Balaji (Student)</span>
-          </button>
-        </div>
-
-        {/* Benefits List */}
-        <div className="mt-8 pt-6 border-t border-[#E9EDF5] space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#5C6E87]">
-            Why login is mandatory:
-          </p>
-
-          <div className="flex items-start gap-2.5 text-xs text-[#101E35]">
-            <CheckCircle weight="fill" className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
-            <span>
-              <strong>Attempt Live Competitions:</strong> Anti-cheat timers and real-time response capture.
-            </span>
-          </div>
-
-          <div className="flex items-start gap-2.5 text-xs text-[#101E35]">
-            <CheckCircle weight="fill" className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
-            <span>
-              <strong>Cryptographic Certificates:</strong> Verifiable QR credentials issued in your legal name.
-            </span>
-          </div>
-
-          <div className="flex items-start gap-2.5 text-xs text-[#101E35]">
-            <CheckCircle weight="fill" className="w-4 h-4 text-[#10B981] shrink-0 mt-0.5" />
-            <span>
-              <strong>Personal Information & History:</strong> Full point ledgers, attempt scores, and rankings.
-            </span>
-          </div>
         </div>
 
         {/* Privacy Note */}
