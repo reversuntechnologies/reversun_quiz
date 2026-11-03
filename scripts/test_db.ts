@@ -16,6 +16,7 @@ async function test() {
   console.log("CATEGORIES:", categories);
 }
 
+
 test()
   .catch((e) => {
     console.error(e);
