@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --primary-orange: #FC6235;
+  --primary-navy: #1B3360;
+  --secondary-orange: #FF5D37;
+  --secondary-navy: #17376F;
+  --orange-light: #FFF4EF;
+  --orange-glow: rgba(252, 98, 53, 0.25);
+  --navy-glow: rgba(27, 51, 96, 0.15);
+  --navy-dark: #0D1B36;
+  --navy-deep: #081122;
+  --navy-surface: #14284D;
+
+  /* Multi-Stop Navy & Orange Gradients */
+  --gradient-navy-banner: linear-gradient(135deg, #13274B 0%, #0C1B35 50%, #060E1C 100%);
+  --gradient-navy-card: linear-gradient(140deg, #1C3A6E 0%, #13274B 50%, #0A162B 100%);
+  --gradient-orange-btn: linear-gradient(135deg, #FC6235 0%, #FF5D37 100%);
+  --gradient-navy-pill: linear-gradient(135deg, #1E3D73 0%, #122547 100%);
+
+  /* Light Theme Surfaces & Borders */
+  --bg-page: #FAF9F6;
+  --bg-card: #FFFFFF;
+  --border-light: #E9EDF5;
+  --border-subtle: #F0F4FA;
+  --text-main: #101E35;
+  --text-muted: #5C6E87;
+  --text-light: #8E9EAF;
+
+  --font-sans: var(--font-space-grotesk), 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', "Courier Prime", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Text Selection in Reversun Brand Colors */
+::selection {
+  background-color: #0B132B;
+  color: #FF5A2B;
+}
+
+::-moz-selection {
+  background-color: #0B132B;
+  color: #FF5A2B;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: var(--font-sans);
+  color: var(--text-main);
+  background-color: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f4f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-orange);
+}

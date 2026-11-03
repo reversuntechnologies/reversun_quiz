@@ -1,0 +1,368 @@
+// Prisma Schema for REVERSUN Quiz Platform
+// Authoritative Database: Neon PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+
+  @@map("user_role")
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+
+  @@map("quiz_status")
+}
+
+enum QuizDifficulty {
+  EASY
+  MEDIUM
+  HARD
+
+  @@map("quiz_difficulty")
+}
+
+enum QuestionType {
+  SINGLE
+  MULTIPLE
+
+  @@map("question_type")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+  INVALIDATED
+
+  @@map("attempt_status")
+}
+
+enum CertificateType {
+  PARTICIPATION
+  WINNER
+  ACHIEVEMENT
+
+  @@map("certificate_type")
+}
+
+// -------------------------------------------------------------
+// MODELS
+// -------------------------------------------------------------
+
+model User {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firebaseUid        String    @unique @map("firebase_uid")
+  email              String    @unique
+  name               String
+  displayName        String?   @map("display_name")
+  age                Int?
+  phone              String?
+  avatarUrl          String?   @map("avatar_url")
+  bio                String?
+  role               UserRole  @default(USER)
+  passwordHash       String?   @map("password_hash")
+  isActive           Boolean   @default(true) @map("is_active")
+  profileCompletedAt DateTime? @map("profile_completed_at") @db.Timestamptz()
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  createdQuizzes       Quiz[]              @relation("QuizCreator")
+  registrations        QuizRegistration[]
+  attempts             QuizAttempt[]
+  quizResults          QuizResult[]
+  pointTransactions    PointTransaction[]
+  certificates         Certificate[]
+  createdAnnouncements Announcement[]      @relation("AnnouncementCreator")
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+
+  quizzes   Quiz[]
+
+  @@map("categories")
+}
+
+model Quiz {
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId           String?        @map("category_id") @db.Uuid
+  title                String
+  slug                 String         @unique
+  description          String?
+  thumbnailUrl         String?        @map("thumbnail_url")
+  difficulty           QuizDifficulty @default(MEDIUM)
+  status               QuizStatus     @default(DRAFT)
+  startsAt             DateTime       @map("starts_at") @db.Timestamptz()
+  endsAt               DateTime       @map("ends_at") @db.Timestamptz()
+  registrationDeadline DateTime?      @map("registration_deadline") @db.Timestamptz()
+  durationMinutes      Int            @map("duration_minutes")
+  maxParticipants      Int?           @map("max_participants")
+  maxAttempts          Int            @default(1) @map("max_attempts")
+  negativeMarking      Boolean        @default(false) @map("negative_marking")
+  resultsPublishAt     DateTime?      @map("results_publish_at") @db.Timestamptz()
+  certificatesEnabled  Boolean        @default(true) @map("certificates_enabled")
+  createdBy            String         @map("created_by") @db.Uuid
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  category          Category?          @relation(fields: [categoryId], references: [id])
+  creator           User               @relation("QuizCreator", fields: [createdBy], references: [id])
+  questions         Question[]
+  registrations     QuizRegistration[]
+  attempts          QuizAttempt[]
+  results           QuizResult[]
+  prizes            Prize[]
+  pointTransactions PointTransaction[]
+  certificates      Certificate[]
+  announcements     Announcement[]
+
+  @@index([status, startsAt, endsAt], map: "idx_quizzes_status_dates")
+  @@map("quizzes")
+}
+
+model Question {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId        String       @map("quiz_id") @db.Uuid
+  questionText  String       @map("question_text")
+  imageUrl      String?      @map("image_url")
+  type          QuestionType
+  marks         Decimal      @default(1) @db.Decimal(8, 2)
+  negativeMarks Decimal      @default(0) @map("negative_marks") @db.Decimal(8, 2)
+  explanation   String?
+  position      Int
+  isActive      Boolean      @default(true) @map("is_active")
+
+  // Relations
+  quiz          Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options       QuestionOption[]
+  attemptAnswers AttemptAnswer[]
+
+  @@unique([quizId, position])
+  @@index([quizId, position], map: "idx_questions_quiz")
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  optionText String   @map("option_text")
+  isCorrect  Boolean  @default(false) @map("is_correct")
+  position   Int
+
+  // Relations
+  question   Question              @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    AttemptAnswerOption[]
+
+  @@unique([questionId, position])
+  @@map("question_options")
+}
+
+model QuizRegistration {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId       String   @map("quiz_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  registeredAt DateTime @default(now()) @map("registered_at") @db.Timestamptz()
+
+  quiz Quiz @relation(fields: [quizId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([quizId, userId])
+  @@index([quizId], map: "idx_registrations_quiz")
+  @@index([userId], map: "idx_registrations_user")
+  @@map("quiz_registrations")
+}
+
+model QuizAttempt {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId        String        @map("quiz_id") @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  attemptNumber Int           @default(1) @map("attempt_number")
+  status        AttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime      @default(now()) @map("started_at") @db.Timestamptz()
+  deadlineAt    DateTime      @map("deadline_at") @db.Timestamptz()
+  submittedAt   DateTime?     @map("submitted_at") @db.Timestamptz()
+  totalScore    Decimal       @default(0) @map("total_score") @db.Decimal(10, 2)
+  maxScore      Decimal       @default(0) @map("max_score") @db.Decimal(10, 2)
+  ipHash        String?       @map("ip_hash")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  quiz    Quiz            @relation(fields: [quizId], references: [id])
+  user    User            @relation(fields: [userId], references: [id])
+  answers AttemptAnswer[]
+  results QuizResult[]
+
+  @@unique([quizId, userId, attemptNumber])
+  @@index([userId, createdAt(sort: Desc)], map: "idx_attempts_user")
+  @@index([quizId, status], map: "idx_attempts_quiz")
+  @@map("quiz_attempts")
+}
+
+model AttemptAnswer {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId    String    @map("attempt_id") @db.Uuid
+  questionId   String    @map("question_id") @db.Uuid
+  isCorrect    Boolean?  @map("is_correct")
+  awardedMarks Decimal?  @map("awarded_marks") @db.Decimal(8, 2)
+  answeredAt   DateTime? @map("answered_at") @db.Timestamptz()
+
+  // Relations
+  attempt         QuizAttempt           @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question        Question              @relation(fields: [questionId], references: [id])
+  selectedOptions AttemptAnswerOption[]
+
+  @@unique([attemptId, questionId])
+  @@map("attempt_answers")
+}
+
+model AttemptAnswerOption {
+  answerId String @map("answer_id") @db.Uuid
+  optionId String @map("option_id") @db.Uuid
+
+  // Relations
+  answer AttemptAnswer  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  option QuestionOption @relation(fields: [optionId], references: [id])
+
+  @@id([answerId, optionId])
+  @@map("attempt_answer_options")
+}
+
+model QuizResult {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId           String   @map("quiz_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  attemptId        String   @map("attempt_id") @db.Uuid
+  score            Decimal  @db.Decimal(10, 2)
+  rank             Int
+  position         Int?
+  completionTimeMs BigInt?  @map("completion_time_ms")
+  isWinner         Boolean  @default(false) @map("is_winner")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  quiz    Quiz        @relation(fields: [quizId], references: [id])
+  user    User        @relation(fields: [userId], references: [id])
+  attempt QuizAttempt @relation(fields: [attemptId], references: [id])
+
+  @@unique([quizId, userId])
+  @@unique([quizId, rank])
+  @@index([quizId, rank], map: "idx_results_leaderboard")
+  @@map("quiz_results")
+}
+
+model Prize {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId         String   @map("quiz_id") @db.Uuid
+  position       Int
+  title          String
+  description    String?
+  rewardType     String   @default("OTHER") @map("reward_type")
+  rewardValue    Decimal? @map("reward_value") @db.Decimal(12, 2)
+  rewardCurrency String?  @map("reward_currency")
+
+  // Relations
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, position])
+  @@map("prizes")
+}
+
+model PointTransaction {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  quizId          String?  @map("quiz_id") @db.Uuid
+  source          String
+  sourceReference String?  @map("source_reference") @db.Uuid
+  points          Int
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id])
+  quiz Quiz? @relation(fields: [quizId], references: [id])
+
+  @@unique([userId, source, sourceReference])
+  @@index([userId, createdAt(sort: Desc)], map: "idx_points_user_date")
+  @@map("point_transactions")
+}
+
+model Certificate {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  certificateNumber String          @unique @map("certificate_number")
+  verificationToken String          @unique @map("verification_token")
+  userId            String          @map("user_id") @db.Uuid
+  quizId            String?         @map("quiz_id") @db.Uuid
+  type              CertificateType
+  position          Int?
+  score             Decimal?        @db.Decimal(10, 2)
+  pdfUrl            String?         @map("pdf_url")
+  imageUrl          String?         @map("image_url")
+  issuedAt          DateTime        @default(now()) @map("issued_at") @db.Timestamptz()
+  revokedAt         DateTime?       @map("revoked_at") @db.Timestamptz()
+  revokeReason      String?         @map("revoke_reason")
+
+  // Relations
+  user User  @relation(fields: [userId], references: [id])
+  quiz Quiz? @relation(fields: [quizId], references: [id])
+
+  @@index([userId, issuedAt(sort: Desc)], map: "idx_certificates_user")
+  @@map("certificates")
+}
+
+model Announcement {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId      String?   @map("quiz_id") @db.Uuid
+  title       String
+  content     String
+  isPublished Boolean   @default(false) @map("is_published")
+  publishedAt DateTime? @map("published_at") @db.Timestamptz()
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  quiz    Quiz? @relation(fields: [quizId], references: [id])
+  creator User? @relation("AnnouncementCreator", fields: [createdBy], references: [id])
+
+  @@map("announcements")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  reason     String?
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Relations
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@map("audit_logs")
+}
